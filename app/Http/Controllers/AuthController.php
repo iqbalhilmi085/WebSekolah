@@ -14,7 +14,13 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard.admin');
+            $user = Auth::user();
+            if ($user->isAdmin() || $user->isGuru()) {
+                return redirect()->route('dashboard.admin');
+            }
+            if ($user->isOrangtua()) {
+                return redirect()->route('orangtua.dashboard');
+            }
         }
         return view('login');
     }
@@ -43,12 +49,14 @@ class AuthController extends Controller
 
             // Arahkan berdasarkan role
             if ($user->isAdmin() || $user->isGuru()) {
-                return redirect()->intended(route('dashboard.admin'))
+                $intended = $request->session()->pull('url.intended', route('dashboard.admin'));
+                return redirect($intended)
                     ->with('success', 'Login berhasil! Selamat datang ' . $user->name);
             }
 
             if ($user->isOrangtua()) {
-                return redirect()->intended(route('orangtua.dashboard'))
+                $intended = $request->session()->pull('url.intended', route('orangtua.dashboard'));
+                return redirect($intended)
                     ->with('success', 'Login berhasil! Selamat datang ' . $user->name);
             }
 

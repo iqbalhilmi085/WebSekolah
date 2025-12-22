@@ -98,7 +98,12 @@ class OrangtuaController extends Controller
                 $riwayatPembayaran = $allPembayaran->sortBy(function($item) use ($bulanOrder) {
                     $bulan = $item->bulan ?? '';
                     $bulanNum = $bulanOrder[$bulan] ?? 99;
-                    $tanggalTimestamp = $item->tanggal_bayar ? $item->tanggal_bayar->timestamp : 0;
+                    // Handle null tanggal_bayar dengan aman
+                    if ($item->tanggal_bayar && $item->tanggal_bayar instanceof \Carbon\Carbon) {
+                        $tanggalTimestamp = $item->tanggal_bayar->timestamp;
+                    } else {
+                        $tanggalTimestamp = 0;
+                    }
                     // Sort by bulan ascending (1-12), then by tanggal descending (terbaru dulu)
                     return [$bulanNum, -$tanggalTimestamp];
                 })->values();
@@ -200,7 +205,7 @@ class OrangtuaController extends Controller
             $p = $siswa->pembayaran()
                 ->where('tahun', $tahun)
                 ->where('bulan', $bulan)
-                ->orderByDesc('tanggal_bayar')
+                ->orderByDesc('created_at')
                 ->first();
 
             if ($p) {

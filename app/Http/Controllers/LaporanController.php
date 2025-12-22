@@ -53,6 +53,7 @@ class LaporanController extends Controller
             'total_jumlah' => $pembayaran->sum('jumlah') ?? 0,
             'lunas' => $pembayaran->where('status', 'lunas')->count(),
             'belum_lunas' => $pembayaran->where('status', 'belum_lunas')->count(),
+            'cicilan' => $pembayaran->where('status', 'cicilan')->count(),
         ];
 
         $siswaList = Siswa::where('status', 'aktif')->orderBy('nama')->get();

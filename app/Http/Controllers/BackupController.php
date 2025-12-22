@@ -58,31 +58,51 @@ class BackupController extends Controller
             $filepath = $backupPath . '/' . $filename;
 
             // Get database config
-            $dbName = config('database.connections.mysql.database');
-            $dbUser = config('database.connections.mysql.username');
-            $dbPass = config('database.connections.mysql.password');
-            $dbHost = config('database.connections.mysql.host');
-
-            // Create backup using mysqldump
-            $command = sprintf(
-                'mysqldump --host=%s --user=%s --password=%s %s > %s',
-                escapeshellarg($dbHost),
-                escapeshellarg($dbUser),
-                escapeshellarg($dbPass),
-                escapeshellarg($dbName),
-                escapeshellarg($filepath)
-            );
-
-            exec($command, $output, $returnVar);
-
-            if ($returnVar === 0 && file_exists($filepath)) {
-                return redirect()->route('backup.index')
-                    ->with('success', 'Backup berhasil dibuat: ' . $filename);
+            $dbConnection = config('database.default');
+            $dbConfig = config("database.connections.{$dbConnection}");
+            
+            // Check if using SQLite
+            if ($dbConfig['driver'] === 'sqlite') {
+                // For SQLite, copy the database file directly
+                $dbPath = database_path($dbConfig['database']);
+                if (file_exists($dbPath)) {
+                    copy($dbPath, $filepath);
+                    return redirect()->route('backup.index')
+                        ->with('success', 'Backup berhasil dibuat: ' . $filename);
+                } else {
+                    // Fallback: Export data secara manual
+                    $this->createManualBackup($filepath);
+                    return redirect()->route('backup.index')
+                        ->with('success', 'Backup berhasil dibuat (manual): ' . $filename);
+                }
             } else {
-                // Fallback: Export data secara manual
-                $this->createManualBackup($filepath);
-                return redirect()->route('backup.index')
-                    ->with('success', 'Backup berhasil dibuat (manual): ' . $filename);
+                // For MySQL/MariaDB, use mysqldump
+                $dbName = $dbConfig['database'];
+                $dbUser = $dbConfig['username'];
+                $dbPass = $dbConfig['password'];
+                $dbHost = $dbConfig['host'];
+
+                // Create backup using mysqldump
+                $command = sprintf(
+                    'mysqldump --host=%s --user=%s --password=%s %s > %s',
+                    escapeshellarg($dbHost),
+                    escapeshellarg($dbUser),
+                    escapeshellarg($dbPass),
+                    escapeshellarg($dbName),
+                    escapeshellarg($filepath)
+                );
+
+                exec($command, $output, $returnVar);
+
+                if ($returnVar === 0 && file_exists($filepath)) {
+                    return redirect()->route('backup.index')
+                        ->with('success', 'Backup berhasil dibuat: ' . $filename);
+                } else {
+                    // Fallback: Export data secara manual
+                    $this->createManualBackup($filepath);
+                    return redirect()->route('backup.index')
+                        ->with('success', 'Backup berhasil dibuat (manual): ' . $filename);
+                }
             }
         } catch (\Exception $e) {
             return redirect()->route('backup.index')

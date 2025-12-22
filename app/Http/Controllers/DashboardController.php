@@ -17,10 +17,18 @@ class DashboardController extends Controller
             $totalSiswaNonaktif = Siswa::where('status', 'nonaktif')->count();
             
             // Handle null tanggal_bayar dengan aman
-            $totalPembayaranBulanIni = Pembayaran::whereNotNull('tanggal_bayar')
-                ->whereMonth('tanggal_bayar', date('m'))
-                ->whereYear('tanggal_bayar', date('Y'))
-                ->sum('jumlah') ?? 0;
+            $dbDriver = DB::connection()->getDriverName();
+            if ($dbDriver === 'sqlite') {
+                $totalPembayaranBulanIni = Pembayaran::whereNotNull('tanggal_bayar')
+                    ->whereRaw("strftime('%m', tanggal_bayar) = ?", [str_pad(date('m'), 2, '0', STR_PAD_LEFT)])
+                    ->whereRaw("strftime('%Y', tanggal_bayar) = ?", [date('Y')])
+                    ->sum('jumlah') ?? 0;
+            } else {
+                $totalPembayaranBulanIni = Pembayaran::whereNotNull('tanggal_bayar')
+                    ->whereMonth('tanggal_bayar', date('m'))
+                    ->whereYear('tanggal_bayar', date('Y'))
+                    ->sum('jumlah') ?? 0;
+            }
             
             $pembayaranLunas = Pembayaran::lunas()
                 ->tahunIni()
@@ -31,14 +39,27 @@ class DashboardController extends Controller
                 ->count();
             
             // Grafik pembayaran per bulan - handle null tanggal_bayar
-            $pembayaranPerBulan = Pembayaran::selectRaw(
-                'MONTH(tanggal_bayar) as bulan, SUM(jumlah) as total'
-            )
-            ->whereNotNull('tanggal_bayar')
-            ->whereYear('tanggal_bayar', date('Y'))
-            ->groupBy(DB::raw('MONTH(tanggal_bayar)'))
-            ->orderBy('bulan', 'asc')
-            ->get();
+            // Compatible dengan SQLite dan MySQL
+            $dbDriver = DB::connection()->getDriverName();
+            if ($dbDriver === 'sqlite') {
+                $pembayaranPerBulan = Pembayaran::selectRaw(
+                    "CAST(strftime('%m', tanggal_bayar) AS INTEGER) as bulan, SUM(jumlah) as total"
+                )
+                ->whereNotNull('tanggal_bayar')
+                ->whereRaw("strftime('%Y', tanggal_bayar) = ?", [date('Y')])
+                ->groupBy(DB::raw("CAST(strftime('%m', tanggal_bayar) AS INTEGER)"))
+                ->orderBy('bulan', 'asc')
+                ->get();
+            } else {
+                $pembayaranPerBulan = Pembayaran::selectRaw(
+                    'MONTH(tanggal_bayar) as bulan, SUM(jumlah) as total'
+                )
+                ->whereNotNull('tanggal_bayar')
+                ->whereYear('tanggal_bayar', date('Y'))
+                ->groupBy(DB::raw('MONTH(tanggal_bayar)'))
+                ->orderBy('bulan', 'asc')
+                ->get();
+            }
             
             // Siswa terbaru
             $siswaTerbaru = Siswa::orderBy('created_at', 'desc')

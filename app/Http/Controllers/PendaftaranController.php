@@ -116,11 +116,19 @@ class PendaftaranController extends Controller
             return redirect()->route('login')
                 ->with('success', 'Pendaftaran berhasil! Data pendaftaran Anda sedang diproses. NIS akan diberikan oleh admin. Silakan login dengan email: ' . $validated['email']);
 
-        } catch (\Exception $e) {
+        } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'Terjadi kesalahan saat pendaftaran: ' . $e->getMessage()]);
+                ->withErrors($e->errors());
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('PendaftaranController::store - Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()
+                ->withInput()
+                ->withErrors(['error' => 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi atau hubungi admin.']);
         }
     }
 }

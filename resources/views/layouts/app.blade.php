@@ -176,6 +176,35 @@
             background-color: #2196f3;
         }
 
+        /* Pagination styling agar selaras dengan tema hijau sekolah */
+        .custom-pagination .page-link {
+            color: #234f1e;
+            border-color: #dde2d2;
+            background-color: #ffffff;
+        }
+
+        .custom-pagination .page-link:hover {
+            color: #2d6a2e;
+            background-color: #f2f7ec;
+            border-color: #c8d4b5;
+        }
+
+        .custom-pagination .page-item.active .page-link {
+            color: #ffffff;
+            background-color: #234f1e;
+            border-color: #234f1e;
+        }
+
+        .custom-pagination .page-item.disabled .page-link {
+            color: #9ca3af;
+            background-color: #ffffff;
+            border-color: #e5e7eb;
+        }
+
+        .custom-pagination .page-link i {
+            font-size: 0.8rem;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 width: 0;

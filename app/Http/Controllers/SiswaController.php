@@ -55,10 +55,18 @@ class SiswaController extends Controller
 
             // Generate NIS otomatis jika tidak diisi (maksimal 7 angka)
             if (empty($validated['nis'])) {
-                $lastSiswa = Siswa::whereNotNull('nis')
-                    ->whereRaw('LENGTH(nis) <= 7')
-                    ->orderByRaw('CAST(nis AS UNSIGNED) DESC')
-                    ->first();
+                $dbDriver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+                if ($dbDriver === 'sqlite') {
+                    $lastSiswa = Siswa::whereNotNull('nis')
+                        ->whereRaw("LENGTH(nis) <= 7")
+                        ->orderByRaw("CAST(nis AS INTEGER) DESC")
+                        ->first();
+                } else {
+                    $lastSiswa = Siswa::whereNotNull('nis')
+                        ->whereRaw('LENGTH(nis) <= 7')
+                        ->orderByRaw('CAST(nis AS UNSIGNED) DESC')
+                        ->first();
+                }
                 
                 if ($lastSiswa && is_numeric($lastSiswa->nis)) {
                     $newNumber = intval($lastSiswa->nis) + 1;
@@ -148,11 +156,20 @@ class SiswaController extends Controller
 
             // Generate NIS otomatis jika tidak diisi dan siswa belum punya NIS (maksimal 7 angka)
             if (empty($validated['nis']) && empty($siswa->nis)) {
-                $lastSiswa = Siswa::whereNotNull('nis')
-                    ->where('id', '!=', $id)
-                    ->whereRaw('LENGTH(nis) <= 7')
-                    ->orderByRaw('CAST(nis AS UNSIGNED) DESC')
-                    ->first();
+                $dbDriver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+                if ($dbDriver === 'sqlite') {
+                    $lastSiswa = Siswa::whereNotNull('nis')
+                        ->where('id', '!=', $id)
+                        ->whereRaw("LENGTH(nis) <= 7")
+                        ->orderByRaw("CAST(nis AS INTEGER) DESC")
+                        ->first();
+                } else {
+                    $lastSiswa = Siswa::whereNotNull('nis')
+                        ->where('id', '!=', $id)
+                        ->whereRaw('LENGTH(nis) <= 7')
+                        ->orderByRaw('CAST(nis AS UNSIGNED) DESC')
+                        ->first();
+                }
                 
                 if ($lastSiswa && is_numeric($lastSiswa->nis)) {
                     $newNumber = intval($lastSiswa->nis) + 1;

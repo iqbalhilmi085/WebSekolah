@@ -214,10 +214,20 @@ class PembayaranController extends Controller
 
     public function downloadKwitansi($id)
     {
-        $pembayaran = Pembayaran::with('siswa')->findOrFail($id);
-        
-        $pdf = Pdf::loadView('pembayaran.kwitansi-pdf', compact('pembayaran'));
-        
-        return $pdf->download('kwitansi-' . $pembayaran->siswa->nis . '-' . date('Ymd') . '.pdf');
+        try {
+            $pembayaran = Pembayaran::with('siswa')->findOrFail($id);
+            
+            if (!$pembayaran->siswa) {
+                return back()->withErrors(['error' => 'Data siswa tidak ditemukan.']);
+            }
+            
+            $pdf = Pdf::loadView('pembayaran.kwitansi-pdf', compact('pembayaran'));
+            
+            $nis = $pembayaran->siswa->nis ?? 'NIS';
+            return $pdf->download('kwitansi-' . $nis . '-' . date('Ymd') . '.pdf');
+        } catch (\Exception $e) {
+            \Log::error('PembayaranController::downloadKwitansi - Error: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Terjadi kesalahan saat mengunduh kwitansi.']);
+        }
     }
 }
