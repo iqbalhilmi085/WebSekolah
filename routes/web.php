@@ -34,9 +34,12 @@ Route::get('/pendaftaran', [PendaftaranController::class, 'show'])->name('pendaf
 Route::post('/pendaftaran', [PendaftaranController::class, 'store'])->name('pendaftaran.store');
 
 // Public Storage Files (untuk bukti pembayaran, foto siswa, dll)
+// Route ini menggunakan web middleware untuk session, tapi tidak require auth
+// Authorization dilakukan di dalam controller
 Route::get('/storage/{path}', [StorageController::class, 'serve'])
     ->where('path', '.*')
-    ->name('storage.serve');
+    ->name('storage.serve')
+    ->middleware('web'); // Web middleware sudah include session
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
@@ -84,6 +87,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orangtua/dashboard', [OrangtuaController::class, 'dashboard'])->name('orangtua.dashboard');
     Route::get('/orangtua/pembayaran', [OrangtuaController::class, 'pembayaran'])->name('orangtua.pembayaran');
     Route::post('/orangtua/pembayaran/upload-bukti', [OrangtuaController::class, 'uploadBukti'])->name('orangtua.pembayaran.upload-bukti');
+    Route::post('/orangtua/pembayaran/{id}/update-bukti', [OrangtuaController::class, 'updateBukti'])->name('orangtua.pembayaran.update-bukti');
     Route::get('/orangtua/notifikasi', [OrangtuaController::class, 'notifikasi'])->name('orangtua.notifikasi');
 
     // Backup Data Sistem

@@ -88,8 +88,6 @@
 @endsection
 
 @section('content')
-    <p>Selamat datang di sistem manajemen TKIT Jamilul Mu'minin.</p>
-
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-info">

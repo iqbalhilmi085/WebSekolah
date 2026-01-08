@@ -249,11 +249,111 @@
                                 </td>
                                 <td>
                                     @if ($p->bukti_pembayaran)
-                                        <a href="{{ url('/storage/'.$p->bukti_pembayaran) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#buktiModal{{ $p->id }}" style="background-color: #234f1e; border-color: #234f1e;">
                                             <i class="fas fa-eye"></i> Lihat
-                                        </a>
+                                        </button>
+                                        
+                                        <!-- Modal Bukti Pembayaran -->
+                                        <div class="modal fade" id="buktiModal{{ $p->id }}" tabindex="-1" role="dialog" aria-labelledby="buktiModalLabel{{ $p->id }}" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                                                <div class="modal-content">
+                                                    <div class="modal-header" style="background-color: #234f1e; color: white;">
+                                                        <h5 class="modal-title" id="buktiModalLabel{{ $p->id }}">
+                                                            <i class="fas fa-image"></i> Bukti Pembayaran SPP
+                                                        </h5>
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="modal-body text-center" style="background-color: #f8f9fa;">
+                                                        <p class="mb-3">
+                                                            <strong>Bulan:</strong> {{ $p->bulan ?? '-' }} {{ $p->tahun }}<br>
+                                                            <strong>Jumlah:</strong> {{ $p->formatted_jumlah }}
+                                                        </p>
+                                                        @php
+                                                            // Normalisasi path file - pastikan format benar
+                                                            $filePath = str_replace('\\', '/', $p->bukti_pembayaran);
+                                                            $filePath = ltrim($filePath, '/');
+                                                            // Encode hanya bagian yang perlu (filename mungkin punya special chars)
+                                                            // Split path dan encode setiap segment
+                                                            $pathSegments = explode('/', $filePath);
+                                                            $encodedSegments = array_map(function($segment) {
+                                                                // Encode segment tapi biarkan slash tetap
+                                                                return rawurlencode($segment);
+                                                            }, $pathSegments);
+                                                            $encodedPath = implode('/', $encodedSegments);
+                                                            // Gunakan url() untuk akses melalui StorageController dengan authorization
+                                                            $imageUrl = url('/storage/' . $encodedPath);
+                                                        @endphp
+                                                        <div style="min-height: 200px; display: flex; align-items: center; justify-content: center; background-color: #f0f0f0; border-radius: 8px; padding: 10px;">
+                                                            <img src="{{ $imageUrl }}" 
+                                                                 alt="Bukti Pembayaran" 
+                                                                 class="img-fluid rounded shadow-sm" 
+                                                                 style="max-height: 70vh; max-width: 100%; border: 2px solid #234f1e; display: block; margin: auto;"
+                                                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23f0f0f0\' width=\'400\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\' font-family=\'Arial\' font-size=\'16\'%3EGambar tidak dapat dimuat%3C/text%3E%3C/svg%3E';">
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer" style="background-color: #f8f9fa;">
+                                                        @if($p->status_verifikasi === 'pending' || $p->status_verifikasi === 'ditolak')
+                                                            <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#editBuktiModal{{ $p->id }}" data-dismiss="modal">
+                                                                <i class="fas fa-edit"></i> Edit Bukti Pembayaran
+                                                            </button>
+                                                        @endif
+                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                                            <i class="fas fa-times"></i> Tutup
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Modal Edit Bukti Pembayaran -->
+                                        <div class="modal fade" id="editBuktiModal{{ $p->id }}" tabindex="-1" role="dialog" aria-labelledby="editBuktiModalLabel{{ $p->id }}" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                                <div class="modal-content">
+                                                    <div class="modal-header" style="background-color: #f59e0b; color: white;">
+                                                        <h5 class="modal-title" id="editBuktiModalLabel{{ $p->id }}">
+                                                            <i class="fas fa-edit"></i> Edit Bukti Pembayaran
+                                                        </h5>
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                    </div>
+                                                    <form action="{{ route('orangtua.pembayaran.update-bukti', $p->id) }}" method="POST" enctype="multipart/form-data">
+                                                        @csrf
+                                                        <div class="modal-body">
+                                                            <div class="alert alert-info">
+                                                                <i class="fas fa-info-circle"></i> 
+                                                                Anda dapat mengganti bukti pembayaran jika sebelumnya salah upload. 
+                                                                Bukti pembayaran baru akan menunggu verifikasi ulang dari TU.
+                                                            </div>
+                                                            <div class="form-group">
+                                                                <label for="bukti_pembayaran_edit{{ $p->id }}">Upload Bukti Pembayaran Baru</label>
+                                                                <input type="file" name="bukti_pembayaran" id="bukti_pembayaran_edit{{ $p->id }}" 
+                                                                       class="form-control-file" accept="image/*" required>
+                                                                <small class="form-text text-muted">
+                                                                    Format JPG/PNG, maksimal 2 MB.
+                                                                </small>
+                                                            </div>
+                                                            <div class="form-group">
+                                                                <p class="mb-1"><strong>Bulan:</strong> {{ $p->bulan ?? '-' }} {{ $p->tahun }}</p>
+                                                                <p class="mb-0"><strong>Jumlah:</strong> {{ $p->formatted_jumlah }}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                                                <i class="fas fa-times"></i> Batal
+                                                            </button>
+                                                            <button type="submit" class="btn btn-warning">
+                                                                <i class="fas fa-save"></i> Simpan Perubahan
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @else
-                                        -
+                                        <span class="text-muted">-</span>
                                     @endif
                                 </td>
                             </tr>

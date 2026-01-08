@@ -7,6 +7,7 @@ use App\Models\Pembayaran;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class OrangtuaController extends Controller
 {
@@ -255,6 +256,56 @@ class OrangtuaController extends Controller
         }
 
         return 'Aktif';
+    }
+
+    public function updateBukti(Request $request, $id)
+    {
+        $this->ensureOrangtua();
+
+        $validated = $request->validate([
+            'bukti_pembayaran' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        // Pastikan pembayaran tersebut milik anak dari orang tua ini
+        $pembayaran = Pembayaran::with('siswa')->findOrFail($id);
+        $siswa = $pembayaran->siswa;
+
+        if (!$siswa || $siswa->no_telp !== Auth::user()->no_hp) {
+            abort(403, 'Anda tidak memiliki akses untuk mengubah bukti pembayaran ini');
+        }
+
+        // Hapus file lama jika ada
+        if ($pembayaran->bukti_pembayaran) {
+            try {
+                Storage::disk('public')->delete($pembayaran->bukti_pembayaran);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to delete old bukti_pembayaran: ' . $e->getMessage());
+            }
+        }
+
+        // Upload file baru
+        $newPath = $request->file('bukti_pembayaran')
+            ->store('bukti_pembayaran', 'public');
+
+        // Update pembayaran
+        $pembayaran->update([
+            'bukti_pembayaran' => $newPath,
+            'status_verifikasi' => 'pending', // Reset status verifikasi karena bukti baru
+        ]);
+
+        // Buat notifikasi untuk admin
+        Notification::create([
+            'user_id' => Auth::id(),
+            'type' => 'pembayaran_verifikasi',
+            'title' => 'Bukti Pembayaran Diperbarui',
+            'message' => "Bukti pembayaran SPP untuk {$siswa->nama} bulan {$pembayaran->bulan} telah diperbarui dan menunggu verifikasi ulang.",
+            'notifiable_type' => Pembayaran::class,
+            'notifiable_id' => $pembayaran->id,
+        ]);
+
+        return redirect()
+            ->route('orangtua.pembayaran', ['siswa_id' => $siswa->id, 'tahun' => $pembayaran->tahun])
+            ->with('success', 'Bukti pembayaran berhasil diperbarui. Mohon tunggu verifikasi dari TU sekolah.');
     }
 
     public function notifikasi()
